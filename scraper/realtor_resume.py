@@ -41,52 +41,39 @@ if __name__ == "__main__":
         for summary_item in summary_items:
             summary[summary_item.find_element(By.CLASS_NAME, "propertyDetailsSectionContentLabel").text] = summary_item.find_element(By.CLASS_NAME, "propertyDetailsSectionContentValue").text
 
-        return {
+        scraped_property_data = {
             'url': listing_url,
             'address': driver.find_element(By.ID, "listingAddress").text.replace('\n', ", "),
             'price': driver.find_element(By.ID, "listingPrice").text,
             'description': driver.find_element(By.ID, "propertyDescriptionCon").text, 
             'summary': summary,
         }
+        
+        pprint(scraped_property_data)
+
+        return scraped_property_data
 
     def reload_driver():
+        global driver
         driver.close()
         driver = uc.Chrome()
 
-    # get all listing links
+    # Resume from last listing
 
-    links = []
 
-    driver.get(base_url)
+    # Load Saved Data
+    links = json.load(open('data.json'))
+    properties = json.load(open('properties.json'))
 
-    number_of_listings = get_number_of_listings()
+    last_scraped_property_url = properties[-1]['url']
 
-    last_page = number_of_listings // 12
-    print(last_page)
-    if last_page > 50:
-        last_page = 50
-    while current_page <= last_page:
-        print("Waiting for page to load...")
-        time.sleep(5)
-        print("getting links from page...")
-        links.extend(get_links_of_current_page())
-        try:
-            print("Going to next page...")
-            current_page += 1
-            go_to_page(current_page)
-        except Exception as e:
-            print(e)
-            break
-        pprint(links)
-        print("current_page", current_page, "last_page", last_page)
+    last_scraped_property_index = links.index(last_scraped_property_url)
 
-        with open('data.json', 'w') as f:
-            json.dump(links, f, indent=4)
-
-    properties = []
+    links = links[last_scraped_property_index + 1 : ]
 
     for link in links:
         try:
+            print("Scraping ", link, "...")
             properties.append(scrape_listing(link))
         except Exception as e:
             print(e)
